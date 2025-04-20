@@ -3,6 +3,7 @@ dotenv.config();
 import TelegramBot from 'node-telegram-bot-api'
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from 'axios';
+//change some code
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY as string);
 

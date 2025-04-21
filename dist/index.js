@@ -14,52 +14,60 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
+process.env.NTBA_FIX_350 = 'true';
 const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
 const generative_ai_1 = require("@google/generative-ai");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-// Check if required environment variables are set
-if (!process.env.GEMINI_KEY || !process.env.TELEGRAM_KEY) {
-    console.error('Missing environment variables');
-    process.exit(1);
-}
+// const token = 'YOUR_TELEGRAM_BOT_TOKEN'; // Replace with your own bot token
 const bot = new node_telegram_bot_api_1.default(process.env.TELEGRAM_KEY, { polling: true });
 bot.on('message', (msg) => __awaiter(void 0, void 0, void 0, function* () {
     const chatId = msg.chat.id;
-    const messageText = "generate Beginner Friendly road map on " + msg.text + " In points like 1,2,3 etc.. using some emoji's and write more interactive message and don't use too texts or long paragraph i want short and clear";
-    console.log("id is:", chatId);
-    console.log(messageText);
-    try {
+    console.log(msg.text);
+    if (msg.text === '/start') {
+        bot.sendMessage(chatId, `Welcome to TSX 2005
+       Your Complete Beginner-Friendly Roadmap Builder 🚀🛠️📚
+This bot is your personal AI assistant that creates a step-by-step learning roadmap based on your custom commands 💡🧠✨.
+
+It generates a fully AI-powered roadmap tailored just for you 🎯🤖, ensuring you stay on the right track from start to success ✅📈.
+
+You’ll receive your complete roadmap as a professional-looking PDF document 📄📥, ready to download and follow anytime 📚✨.
+
+So let’s get started and build your future, one roadmap at a time! 🔥🛤️👨‍💻
+
+Now What Drop Message Like 'Hey i want to learn something like this and See your RoadMap on that'
+`);
+    }
+    else {
+        const messageText = "generate Beginner Friendly road map on " + msg.text + "  and give info In points like 1,2,3 etc.. using some emoji's and write more interactive message.";
         const result = yield model.generateContent([messageText]);
         const ResponseFromGemini = result.response.text();
-        console.log("This is from Gemini:", ResponseFromGemini);
-        // Create a PDF document
         const doc = new pdfkit_1.default();
         const filePath = `./roadmap-${chatId}.pdf`; // Create a file for the specific chat ID to avoid collisions
-        doc.pipe(fs_1.default.createWriteStream(filePath)); // Stream the file to disk
-        doc.fontSize(12).text("Roadmap for: " + msg.text, { align: 'center' });
+        doc.registerFont('EmojiFont', path_1.default.join(__dirname, '..', 'Symbola.ttf'));
+        doc.pipe(fs_1.default.createWriteStream(filePath));
+        doc.font('EmojiFont');
+        doc.fontSize(12).text("Begginer Friendly Roadmap 🚀🚀", { align: 'center' });
         doc.moveDown();
         doc.fontSize(10).text(ResponseFromGemini); // Add the generated content from Gemini
         doc.end();
-        // Wait for the PDF file to be written before sending it
-        doc.on('finish', () => {
-            // Send the PDF file to the user
-            bot.sendDocument(chatId, filePath).then(() => {
-                // After sending, delete the file from the server
-                fs_1.default.unlinkSync(filePath);
-            }).catch((err) => {
-                console.error("Error sending PDF:", err);
-                bot.sendMessage(chatId, "Oops! Something went wrong. Please try again later.");
-            });
-        });
-    }
-    catch (error) {
-        console.error("Error occurred:", error);
-        bot.sendMessage(chatId, "Oops! Something went wrong. Please try again later.");
-    }
-    if (msg.text === '/start') {
-        bot.sendMessage(chatId, 'Welcome to the bot!');
+        setTimeout(() => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const fileBuffer = fs_1.default.readFileSync(filePath);
+                yield bot.sendDocument(chatId, fileBuffer, {}, {
+                    filename: `roadmap-${chatId}.pdf`,
+                    contentType: 'application/pdf',
+                });
+                // fs.unlinkSync(fi
+            }
+            catch (error) {
+                console.error('Error sending document:', error);
+                bot.sendMessage(chatId, 'Sorry, there was an error sending the file.');
+            }
+        }), 1000);
+        // Delay to ensure the file is fully written
     }
 }));
